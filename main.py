@@ -2,8 +2,11 @@ import os
 import csv
 import re
 import mysql.connector
+import skimage
 from dateutil.parser import parse
 import matplotlib.pyplot as plt
+import datetime
+from skimage.io import imread, imsave
 
 
 def replfunc(m):
@@ -190,7 +193,7 @@ def get_rt_data(db_name,country_name):
     tab2 = cursor.fetchall()
     #for str in tab2:
         #print(str)
-    print('rt count in one country: {:d}'.format(len(tab2)))
+    print(f'Now completed rt for {country_name}')
 
 
     mydb.close()
@@ -206,6 +209,8 @@ def plot_data(db_name,country):
 
     get_data =("SELECT date, Rt from infection WHERE id = %s")
 
+    get_graph=("SELECT * FROM graph")
+
     cursor.execute(get_index, [country, ])
     idx = cursor.fetchone()
     idx = idx[0]
@@ -218,18 +223,44 @@ def plot_data(db_name,country):
         arr_date.append(el[0])
         arr_rt.append(el[1])
 
-    fig,ax = plt.subplots(nrows =1,ncols=1,figsize = (5,5))
-    ax.set_xlabel('Dates')
-    ax.set_ylabel('Rt')
-    plt.title('Covid19 Rt cofficient')
-    plt.plot(arr_date,arr_rt,label =country)
-    plt.legend(loc="upper right")
+    cursor.execute('SELECT * FROM graph WHERE id =%s', (idx,))
+    tab0 = cursor.fetchone()
+    if tab0 ==None:
+        fig,ax = plt.subplots(nrows =1,ncols=1,figsize = (10,5))
+        ax.set_xlabel('Dates')
+        ax.set_ylabel('Rt')
+        plt.title('Covid19 Rt cofficient')
+        plt.plot(arr_date,arr_rt,label =country)
+        plt.legend(loc="upper right")
 
     ###Здесь должен быть блок сохранения графика в mysql###
+        fig.savefig(f"{country}.jpg")
+        f = open(f'{country}.jpg', 'rb')
+        binary_graph = f.read()
+        f.close()
 
+        cursor.execute(get_graph)
+        tab1 =cursor.fetchall()
+        for el2 in tab1:
+            print(el2)
 
-
+        cursor.execute('SELECT * FROM graph WHERE country =%s',(country,))
+        tab = cursor.fetchall()
+        if tab==[]:
+            print('tab0 = none')
+            cursor.execute('INSERT INTO graph (id,country,date,plot) VALUES (%s,%s,%s,%s)',(idx,country,datetime.datetime.now(),binary_graph))
+            mydb.commit()
     ###Конец блока сохранения###
+    else:
+        with open(f'{country}.jpg', 'wb') as file:
+            file.write(tab0[3])
+            file.close()
+
+        img = skimage.io.imread(f'{country}.jpg')
+        print('here')
+        plt.imshow(img)
+
+        #plt.imshow(m)
 
 
     mydb.close()
@@ -254,15 +285,15 @@ def plot_all(db_name,countries_str):
         countries_rt.append(rt)
         #countries_names.append(el)
 
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 5))
-    ax.set_xlabel('Dates')
-    ax.set_ylabel('Rt')
-    plt.title('Covid19 Rt cofficient')
+    if len(countries) > 1:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 5))
+        ax.set_xlabel('Dates')
+        ax.set_ylabel('Rt')
+        plt.title('Covid19 Rt cofficient')
+        for el in countries:
+            plt.plot(countries_dates[countries.index(el)], countries_rt[countries.index(el)], label=el)
 
-    for el in countries:
-        plt.plot(countries_dates[countries.index(el)], countries_rt[countries.index(el)], label=el)
-
-    plt.legend(loc="upper right")
+        plt.legend(loc="upper right")
 
     plt.show()
 # plt.figure()
