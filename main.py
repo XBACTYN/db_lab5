@@ -250,6 +250,8 @@ def plot_data(db_name,country):
             print('tab0 = none')
             cursor.execute('INSERT INTO graph (id,country,date,plot) VALUES (%s,%s,%s,%s)',(idx,country,datetime.datetime.now(),binary_graph))
             mydb.commit()
+
+
     ###Конец блока сохранения###
     else:
         with open(f'{country}.jpg', 'wb') as file:
@@ -257,8 +259,11 @@ def plot_data(db_name,country):
             file.close()
 
         img = skimage.io.imread(f'{country}.jpg')
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10, 5))
         print('here')
-        plt.imshow(img)
+        plt.axis('off')
+        ax.imshow(img)
+
 
         #plt.imshow(m)
 
